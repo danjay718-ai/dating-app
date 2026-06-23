@@ -55,16 +55,12 @@ class ConversationController extends Controller
     /**
      * Show a single conversation and all its messages.
      *
-     * We authorize that the user is a participant before showing the page.
+     * Authorization is handled by ConversationPolicy::view().
+     * Laravel will automatically throw a 403 if the policy returns false.
      */
-    public function show(Request $request, Conversation $conversation): View
+    public function show(Conversation $conversation): View
     {
-        // Authorization: only participants can view this conversation
-        abort_unless(
-            $conversation->participants()->where('users.id', $request->user()->id)->exists(),
-            403,
-            'You are not a participant in this conversation.'
-        );
+        $this->authorize('view', $conversation);
 
         $conversation->load([
             'messages.sender.profile', // Load sender info for each message
