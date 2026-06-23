@@ -15,15 +15,17 @@ class MessageController extends Controller
      * The controller receives the validated request and conversation,
      * then delegates the actual work to SendMessageAction.
      *
-     * SendMessageAction internally verifies that the sender is a participant,
-     * so even if someone bypasses the UI, they cannot send to conversations
-     * they don't belong to.
+     * ConversationPolicy::sendMessage() is checked here via $this->authorize()
+     * before the action is even called — clean, declarative authorization.
+     * SendMessageAction also has its own participant guard as a safety net.
      */
     public function store(
         StoreMessageRequest $request,
         Conversation $conversation,
         SendMessageAction $action
     ): RedirectResponse {
+        $this->authorize('sendMessage', $conversation);
+
         $action->execute(
             $request->user(),
             $conversation,
