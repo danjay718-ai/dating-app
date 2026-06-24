@@ -1,18 +1,14 @@
 <x-app-layout>
-    <x-slot name="header">
-        <div class="flex items-center gap-2">
-            <a href="{{ route('browse.index') }}" class="text-gray-400 hover:text-gray-600 transition-colors">
-                &larr; Browse
-            </a>
-            <span class="text-gray-300">/</span>
-            <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-                {{ $user->name }}
-            </h2>
-        </div>
-    </x-slot>
-
-    <div class="py-12">
+    <div class="py-10">
         <div class="max-w-2xl mx-auto sm:px-6 lg:px-8">
+
+            {{-- Breadcrumb --}}
+            <div class="flex items-center gap-2 mb-6 text-sm">
+                <a href="{{ route('browse.index') }}" class="text-gray-400 hover:text-indigo-600 transition-colors">← Browse</a>
+                <span class="text-gray-300">/</span>
+                <span class="text-gray-700 font-medium">{{ $user->name }}</span>
+            </div>
+
             <div class="bg-white shadow-sm rounded-xl overflow-hidden">
 
                 {{-- Hero / Avatar banner --}}
