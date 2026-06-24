@@ -1,66 +1,79 @@
-<x-app-layout>
-    <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('Messages') }}
-        </h2>
-    </x-slot>
+<!DOCTYPE html>
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <title>Messages — {{ config('app.name') }}</title>
+    <link rel="preconnect" href="https://fonts.bunny.net">
+    <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
+</head>
+<body class="font-sans antialiased bg-gray-100">
 
-    <div class="py-12">
-        <div class="max-w-3xl mx-auto sm:px-6 lg:px-8">
+{{--
+    Full-screen chat layout.
+    On desktop: sidebar (left) + main panel (right), both filling the viewport height.
+    On mobile:  Alpine.js toggles between sidebar and main panel.
+--}}
+<div
+    class="flex h-screen overflow-hidden"
+    x-data="{ showSidebar: true }"
+>
+    {{-- ═══════════════════════════════ SIDEBAR ═══════════════════════════════ --}}
+    <aside
+        class="flex-shrink-0 w-full lg:w-80 bg-indigo-900 flex flex-col
+               lg:flex lg:relative
+               absolute inset-0 z-10"
+        :class="showSidebar ? 'flex' : 'hidden lg:flex'"
+    >
+        @include('conversations.partials.sidebar', ['conversations' => $conversations])
+    </aside>
 
-            {{-- Error Flash --}}
-            @if (session('error'))
-                <div class="mb-4 p-4 bg-red-100 border border-red-300 text-red-800 rounded-lg text-sm">
-                    {{ session('error') }}
-                </div>
-            @endif
+    {{-- ═══════════════════════════════ EMPTY STATE ═══════════════════════════════ --}}
+    <main
+        class="flex-1 flex flex-col bg-gray-50"
+        :class="showSidebar ? 'hidden lg:flex' : 'flex'"
+    >
+        {{-- Top bar (mobile: back button | desktop: nav bar) --}}
+        <header class="flex items-center gap-3 px-6 py-4 bg-white border-b border-gray-200 shadow-sm">
 
-            @if ($conversations->isEmpty())
-                <div class="text-center py-20 text-gray-400">
-                    <p class="text-lg font-medium">No conversations yet.</p>
-                    <p class="text-sm mt-1">
-                        <a href="{{ route('browse.index') }}" class="text-indigo-600 hover:underline">Browse profiles</a>
-                        and start a conversation!
-                    </p>
-                </div>
-            @else
-                <div class="space-y-3">
-                    @foreach ($conversations as $conversation)
-                        @php
-                            // Find the other participant (not the current user)
-                            $other = $conversation->participants->firstWhere('id', '!=', auth()->id());
-                            $latest = $conversation->messages->first();
-                        @endphp
+            {{-- Mobile: back to sidebar --}}
+            <button
+                class="lg:hidden text-gray-400 hover:text-gray-600"
+                @click="showSidebar = true"
+            >
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
+                </svg>
+            </button>
 
-                        <a
-                            href="{{ route('conversations.show', $conversation) }}"
-                            class="flex items-center gap-4 bg-white rounded-xl shadow-sm border border-gray-100 p-4 hover:shadow-md hover:border-indigo-200 transition-all duration-150"
-                        >
-                            {{-- Avatar --}}
-                            <div class="flex-shrink-0 h-12 w-12 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center">
-                                <span class="text-white text-lg font-bold">
-                                    {{ strtoupper(substr($other?->name ?? '?', 0, 1)) }}
-                                </span>
-                            </div>
+            <span class="font-semibold text-gray-800 text-sm">Messages</span>
 
-                            {{-- Info --}}
-                            <div class="flex-1 min-w-0">
-                                <p class="font-semibold text-gray-900 truncate">{{ $other?->name ?? 'Unknown' }}</p>
-                                <p class="text-sm text-gray-500 truncate">
-                                    {{ $latest?->body ? Str::limit($latest->body, 60) : 'No messages yet.' }}
-                                </p>
-                            </div>
+            {{-- Desktop: utility links --}}
+            <div class="hidden lg:flex items-center gap-4 ml-auto text-sm text-gray-500">
+                <a href="{{ route('browse.index') }}" class="hover:text-indigo-600 transition-colors">Browse</a>
+                <a href="{{ route('dating-profile.edit') }}" class="hover:text-indigo-600 transition-colors">My Profile</a>
+                <a href="{{ route('dashboard') }}" class="hover:text-indigo-600 transition-colors">Dashboard</a>
+                <form method="POST" action="{{ route('logout') }}" class="inline">
+                    @csrf
+                    <button type="submit" class="hover:text-red-500 transition-colors">Log out</button>
+                </form>
+            </div>
+        </header>
 
-                            {{-- Time --}}
-                            @if ($latest)
-                                <div class="flex-shrink-0 text-xs text-gray-400">
-                                    {{ $latest->created_at->diffForHumans() }}
-                                </div>
-                            @endif
-                        </a>
-                    @endforeach
-                </div>
-            @endif
+        {{-- Empty state --}}
+        <div class="flex-1 flex flex-col items-center justify-center text-gray-400">
+            <div class="text-6xl mb-4">💬</div>
+            <p class="text-lg font-medium text-gray-600">Your Messages</p>
+            <p class="text-sm mt-1">
+                Select a conversation from the sidebar, or
+                <a href="{{ route('browse.index') }}" class="text-indigo-600 hover:underline">browse profiles</a>
+                to start one.
+            </p>
         </div>
-    </div>
-</x-app-layout>
+    </main>
+</div>
+
+</body>
+</html>
