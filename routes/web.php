@@ -26,8 +26,8 @@ Route::get('/', function () {
 
 Route::middleware(['auth', 'verified'])->group(function () {
 
-    // Dashboard
-    Route::get('/dashboard', fn () => view('dashboard'))->name('dashboard');
+    // Dashboard no longer exists — redirect to Browse
+    Route::get('/dashboard', fn () => redirect()->route('browse.index'))->name('dashboard');
 
     // Breeze account settings (name, email, password, delete account)
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
