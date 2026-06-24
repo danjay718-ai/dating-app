@@ -27,7 +27,7 @@
                 <div class="space-y-3">
                     @foreach ($conversations as $conversation)
                         @php
-                            {{-- Find the other participant (not the current user) --}}
+                            // Find the other participant (not the current user)
                             $other = $conversation->participants->firstWhere('id', '!=', auth()->id());
                             $latest = $conversation->messages->first();
                         @endphp
