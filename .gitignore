@@ -25,3 +25,7 @@ _ide_helper.php
 Homestead.json
 Homestead.yaml
 Thumbs.db
+
+# Planning & documentation (local only)
+IMPLEMENTATION_GUIDE.md
+architectural-decision.md
