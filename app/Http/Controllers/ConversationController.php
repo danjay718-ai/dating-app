@@ -8,9 +8,12 @@ use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+
 
 class ConversationController extends Controller
 {
+    use AuthorizesRequests;
     /**
      * List all conversations the authenticated user is part of.
      *
@@ -57,8 +60,10 @@ class ConversationController extends Controller
      *
      * Authorization is handled by ConversationPolicy::view().
      * Laravel will automatically throw a 403 if the policy returns false.
+     *
+     * We also load all conversations for the sidebar panel.
      */
-    public function show(Conversation $conversation): View
+    public function show(Request $request, Conversation $conversation): View
     {
         $this->authorize('view', $conversation);
 
@@ -67,6 +72,16 @@ class ConversationController extends Controller
             'participants.profile',    // Load all participant profiles
         ]);
 
-        return view('conversations.show', compact('conversation'));
+        // Load sidebar conversations
+        $conversations = $request->user()
+            ->conversations()
+            ->with([
+                'participants.profile',
+                'messages' => fn ($q) => $q->latest()->limit(1),
+            ])
+            ->latest()
+            ->get();
+
+        return view('conversations.show', compact('conversation', 'conversations'));
     }
 }
