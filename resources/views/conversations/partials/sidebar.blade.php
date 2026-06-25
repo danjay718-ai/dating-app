@@ -1,81 +1,64 @@
 {{--
-    Shared chat sidebar partial.
+    Shared messages sidebar.
     Variables expected:
-      $conversations      - Collection of conversations for the sidebar
-      $activeConversation - (optional) currently open Conversation model
+      $conversations      - Collection of conversations
+      $activeConversation - optional current Conversation model
 --}}
-<div class="flex flex-col h-full">
-
-    {{-- Sidebar Header --}}
-    <div class="flex items-center justify-between px-4 py-4 border-b border-white/10">
-        <div>
-            <p class="text-xs text-indigo-300 font-medium tracking-widest uppercase">Messages</p>
-            <p class="text-white font-semibold text-sm mt-0.5 truncate max-w-[160px]">{{ auth()->user()->name }}</p>
+<aside class="flex h-full w-full flex-col rounded-[1.5rem] bg-white ring-1 ring-[#f2d7d5]">
+    <div class="border-b border-[#f2d7d5] p-5">
+        <div class="flex items-center justify-between gap-3">
+            <div>
+                <p class="text-sm font-bold uppercase tracking-[0.16em] text-[#be185d]">Messages</p>
+                <h2 class="mt-2 text-2xl font-bold tracking-normal text-[#32142f]">Inbox</h2>
+            </div>
+            <a href="{{ route('browse.index') }}" class="flex h-10 w-10 items-center justify-center rounded-full bg-[#9f2d60] text-white transition hover:bg-[#7c244f]" aria-label="Start new conversation">
+                <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M12 5v14"/>
+                    <path d="M5 12h14"/>
+                </svg>
+            </a>
         </div>
-        <a
-            href="{{ route('browse.index') }}"
-            title="Start new conversation"
-            class="flex items-center justify-center w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 transition-colors"
-        >
-            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
-            </svg>
-        </a>
     </div>
 
-    {{-- Conversation List --}}
-    <div class="flex-1 overflow-y-auto py-2">
+    <div class="flex-1 overflow-y-auto p-3">
         @forelse ($conversations as $conv)
             @php
-                $other  = $conv->participants->firstWhere('id', '!=', auth()->id());
+                $other = $conv->participants->firstWhere('id', '!=', auth()->id());
                 $latest = $conv->messages->first();
                 $isActive = isset($activeConversation) && $activeConversation->id === $conv->id;
             @endphp
 
             <a
                 href="{{ route('conversations.show', $conv) }}"
-                class="flex items-center gap-3 px-4 py-3 transition-colors duration-100
-                    {{ $isActive ? 'bg-white/20' : 'hover:bg-white/10' }}"
+                class="mb-2 flex items-center gap-3 rounded-2xl p-3 transition {{ $isActive ? 'bg-[#fff1f4]' : 'hover:bg-[#fff7f5]' }}"
             >
-                {{-- Avatar --}}
-                <div class="relative flex-shrink-0">
-                    <div class="w-10 h-10 rounded-full bg-gradient-to-br from-pink-400 to-indigo-500 flex items-center justify-center">
-                        <span class="text-white font-bold text-sm">
-                            {{ strtoupper(substr($other?->name ?? '?', 0, 1)) }}
-                        </span>
-                    </div>
+                <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[linear-gradient(135deg,#fb7185,#7c2d72)] text-sm font-bold text-white">
+                    {{ strtoupper(substr($other?->name ?? '?', 0, 1)) }}
                 </div>
-
-                {{-- Info --}}
-                <div class="flex-1 min-w-0">
-                    <div class="flex justify-between items-baseline">
-                        <p class="text-sm font-semibold text-white truncate">{{ $other?->name ?? 'Unknown' }}</p>
+                <div class="min-w-0 flex-1">
+                    <div class="flex items-baseline justify-between gap-2">
+                        <p class="truncate text-sm font-bold text-[#32142f]">{{ $other?->name ?? 'Unknown' }}</p>
                         @if ($latest)
-                            <span class="text-[10px] text-indigo-300 flex-shrink-0 ml-1">
-                                {{ $latest->created_at->format('g:i A') }}
-                            </span>
+                            <span class="shrink-0 text-[11px] font-semibold text-[#a18496]">{{ $latest->created_at->format('g:i A') }}</span>
                         @endif
                     </div>
-                    <p class="text-xs text-indigo-200 truncate mt-0.5">
-                        {{ $latest?->body ? Str::limit($latest->body, 35) : 'No messages yet.' }}
+                    <p class="mt-1 truncate text-xs leading-5 text-[#7a5a70]">
+                        {{ $latest?->body ? Str::limit($latest->body, 42) : 'No messages yet.' }}
                     </p>
                 </div>
             </a>
         @empty
-            <div class="px-4 py-8 text-center text-indigo-300 text-xs">
-                No conversations yet.<br>
-                <a href="{{ route('browse.index') }}" class="underline hover:text-white mt-1 inline-block">Browse profiles</a>
+            <div class="px-4 py-10 text-center">
+                <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[#fff1f4] text-[#9f2d60]">
+                    <svg class="h-8 w-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M8 9h8"/>
+                        <path d="M8 13h6"/>
+                        <path d="M9 18H6a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3h12a3 3 0 0 1 3 3v8a3 3 0 0 1-3 3h-3l-3 3-3-3Z"/>
+                    </svg>
+                </div>
+                <p class="mt-4 text-sm font-bold text-[#32142f]">No conversations yet</p>
+                <a href="{{ route('browse.index') }}" class="mt-2 inline-block text-sm font-bold text-[#9f2d60]">Discover matches</a>
             </div>
         @endforelse
     </div>
-
-    {{-- Sidebar Footer — account link --}}
-    <div class="border-t border-white/10 px-4 py-3">
-        <a href="{{ route('dashboard') }}" class="flex items-center gap-2 text-indigo-300 hover:text-white text-xs transition-colors">
-            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-            </svg>
-            Dashboard
-        </a>
-    </div>
-</div>
+</aside>

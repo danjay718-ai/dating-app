@@ -1,185 +1,110 @@
-<!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="csrf-token" content="{{ csrf_token() }}">
-    @php $other = $conversation->participants->firstWhere('id', '!=', auth()->id()); @endphp
-    <title>{{ $other?->name ?? 'Conversation' }} — {{ config('app.name') }}</title>
-    <link rel="preconnect" href="https://fonts.bunny.net">
-    <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
-</head>
-<body class="font-sans antialiased bg-gray-100">
+<x-app-layout>
+    @php
+        $other = $conversation->participants->firstWhere('id', '!=', auth()->id());
+    @endphp
 
-<div
-    class="flex h-screen overflow-hidden"
-    x-data="{ showSidebar: false }"
->
-    {{-- ═══════════════════════════════ SIDEBAR ═══════════════════════════════ --}}
-    <aside
-        class="flex-shrink-0 w-full lg:w-80 bg-indigo-900 flex flex-col
-               lg:flex lg:relative
-               absolute inset-0 z-10"
-        :class="showSidebar ? 'flex' : 'hidden lg:flex'"
-    >
-        @include('conversations.partials.sidebar', [
-            'conversations'      => $conversations,
-            'activeConversation' => $conversation,
-        ])
-    </aside>
+    <div class="min-h-screen bg-[#fff7f5] px-4 py-6 sm:px-6 lg:px-8">
+        <div class="mx-auto grid h-[calc(100vh-3rem)] max-w-[1500px] gap-6 lg:grid-cols-[360px_1fr]">
+            @include('conversations.partials.sidebar', [
+                'conversations' => $conversations,
+                'activeConversation' => $conversation,
+            ])
 
-    {{-- ═══════════════════════════════ CHAT PANEL ═══════════════════════════════ --}}
-    <main
-        class="flex-1 flex flex-col bg-white min-w-0"
-        :class="showSidebar ? 'hidden lg:flex' : 'flex'"
-    >
+            <main class="flex min-h-0 flex-col overflow-hidden rounded-[1.5rem] bg-white ring-1 ring-[#f2d7d5]">
+                <header class="flex items-center gap-4 border-b border-[#f2d7d5] px-5 py-4">
+                    <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[linear-gradient(135deg,#fb7185,#7c2d72)] text-sm font-bold text-white">
+                        {{ strtoupper(substr($other?->name ?? '?', 0, 1)) }}
+                    </div>
 
-        {{-- ── Chat Header ── --}}
-        <header class="flex items-center gap-3 px-4 py-3 bg-white border-b border-gray-200 shadow-sm flex-shrink-0">
-
-            {{-- Mobile: open sidebar --}}
-            <button
-                class="lg:hidden flex-shrink-0 text-gray-400 hover:text-indigo-600 transition-colors"
-                @click="showSidebar = true"
-                title="Back to conversations"
-            >
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
-                </svg>
-            </button>
-
-            {{-- Avatar --}}
-            <div class="flex-shrink-0 w-9 h-9 rounded-full bg-gradient-to-br from-pink-400 to-indigo-500 flex items-center justify-center">
-                <span class="text-white font-bold text-sm">
-                    {{ strtoupper(substr($other?->name ?? '?', 0, 1)) }}
-                </span>
-            </div>
-
-            {{-- Name & status --}}
-            <div class="flex-1 min-w-0">
-                <p class="font-semibold text-gray-900 text-sm truncate">{{ $other?->name ?? 'Unknown' }}</p>
-                @if ($other?->profile?->location)
-                    <p class="text-xs text-gray-400 truncate">📍 {{ $other->profile->location }}</p>
-                @endif
-            </div>
-
-            {{-- View profile link --}}
-            @if ($other)
-                <a
-                    href="{{ route('browse.show', $other) }}"
-                    class="flex-shrink-0 text-xs text-indigo-600 hover:text-indigo-800 font-medium transition-colors hidden sm:block"
-                >
-                    View profile
-                </a>
-            @endif
-        </header>
-
-        {{-- ── Messages Thread ── --}}
-        <div
-            id="messages-thread"
-            class="flex-1 overflow-y-auto px-4 py-6 space-y-4 bg-gray-50"
-        >
-            @if ($conversation->messages->isEmpty())
-                <div class="flex flex-col items-center justify-center h-full text-gray-400 text-sm">
-                    <div class="text-4xl mb-3">👋</div>
-                    <p>No messages yet. Say hello!</p>
-                </div>
-            @else
-                @foreach ($conversation->messages as $message)
-                    @php $isMine = $message->sender_id === auth()->id(); @endphp
-
-                    <div class="flex {{ $isMine ? 'justify-end' : 'justify-start' }} items-end gap-2">
-
-                        {{-- Their avatar (only for received messages) --}}
-                        @unless ($isMine)
-                            <div class="flex-shrink-0 w-7 h-7 rounded-full bg-gradient-to-br from-pink-400 to-indigo-500 flex items-center justify-center mb-1">
-                                <span class="text-white font-bold text-xs">
-                                    {{ strtoupper(substr($message->sender?->name ?? '?', 0, 1)) }}
-                                </span>
-                            </div>
-                        @endunless
-
-                        {{-- Bubble --}}
-                        <div class="max-w-xs lg:max-w-md xl:max-w-lg">
-                            <div class="px-4 py-2.5 rounded-2xl text-sm leading-relaxed break-words
-                                {{ $isMine
-                                    ? 'bg-indigo-600 text-white rounded-br-sm'
-                                    : 'bg-white text-gray-800 rounded-bl-sm shadow-sm border border-gray-100' }}"
-                            >
-                                {{ $message->body }}
-                            </div>
-                            <p class="text-[11px] text-gray-400 mt-1 {{ $isMine ? 'text-right' : 'text-left ml-1' }}">
-                                {{ $message->created_at->format('g:i A') }}
-                            </p>
-                        </div>
-
-                        {{-- My avatar (only for sent messages) --}}
-                        @if ($isMine)
-                            <div class="flex-shrink-0 w-7 h-7 rounded-full bg-indigo-600 flex items-center justify-center mb-1">
-                                <span class="text-white font-bold text-xs">
-                                    {{ strtoupper(substr(auth()->user()->name, 0, 1)) }}
-                                </span>
-                            </div>
+                    <div class="min-w-0 flex-1">
+                        <h1 class="truncate text-lg font-bold tracking-normal text-[#32142f]">{{ $other?->name ?? 'Unknown' }}</h1>
+                        @if ($other?->profile?->location)
+                            <p class="mt-1 truncate text-sm font-medium text-[#8a6a7f]">{{ $other->profile->location }}</p>
                         @endif
                     </div>
-                @endforeach
-            @endif
+
+                    @if ($other)
+                        <a href="{{ route('browse.show', $other) }}" class="hidden rounded-full bg-[#fff7f5] px-4 py-2 text-sm font-bold text-[#7a5a70] ring-1 ring-[#f2d7d5] transition hover:text-[#9f2d60] sm:inline-flex">
+                            View profile
+                        </a>
+                    @endif
+                </header>
+
+                <section id="messages-thread" class="flex-1 space-y-4 overflow-y-auto bg-[#fffaf9] px-5 py-6">
+                    @if ($conversation->messages->isEmpty())
+                        <div class="flex h-full flex-col items-center justify-center text-center">
+                            <div class="flex h-20 w-20 items-center justify-center rounded-full bg-[#fff1f4] text-[#9f2d60]">
+                                <svg class="h-10 w-10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                    <path d="M19.5 12.6 12 20l-7.5-7.4a5 5 0 0 1 7.1-7.1l.4.4.4-.4a5 5 0 0 1 7.1 7.1Z"/>
+                                </svg>
+                            </div>
+                            <p class="mt-5 text-lg font-bold text-[#32142f]">No messages yet</p>
+                            <p class="mt-2 max-w-sm text-sm leading-6 text-[#6c4d65]">Start with something simple and genuine.</p>
+                        </div>
+                    @else
+                        @foreach ($conversation->messages as $message)
+                            @php $isMine = $message->sender_id === auth()->id(); @endphp
+
+                            <div class="flex {{ $isMine ? 'justify-end' : 'justify-start' }} items-end gap-2">
+                                @unless ($isMine)
+                                    <div class="mb-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[linear-gradient(135deg,#fb7185,#7c2d72)] text-xs font-bold text-white">
+                                        {{ strtoupper(substr($message->sender?->name ?? '?', 0, 1)) }}
+                                    </div>
+                                @endunless
+
+                                <div class="max-w-[78%] sm:max-w-md lg:max-w-xl">
+                                    <div class="rounded-3xl px-4 py-3 text-sm leading-6 {{ $isMine ? 'rounded-br-md bg-[#9f2d60] text-white' : 'rounded-bl-md bg-white text-[#32142f] ring-1 ring-[#f2d7d5]' }}">
+                                        {{ $message->body }}
+                                    </div>
+                                    <p class="mt-1 text-[11px] font-semibold text-[#a18496] {{ $isMine ? 'text-right' : 'ml-1 text-left' }}">
+                                        {{ $message->created_at->format('g:i A') }}
+                                    </p>
+                                </div>
+
+                                @if ($isMine)
+                                    <div class="mb-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#32142f] text-xs font-bold text-white">
+                                        {{ strtoupper(substr(auth()->user()->name, 0, 1)) }}
+                                    </div>
+                                @endif
+                            </div>
+                        @endforeach
+                    @endif
+                </section>
+
+                <footer class="border-t border-[#f2d7d5] bg-white px-5 py-4">
+                    @if ($errors->any())
+                        <p class="mb-2 text-xs font-semibold text-red-500">{{ $errors->first('body') }}</p>
+                    @endif
+
+                    <form method="POST" action="{{ route('messages.store', $conversation) }}" class="flex items-end gap-3">
+                        @csrf
+                        <textarea
+                            id="message-input"
+                            name="body"
+                            rows="1"
+                            placeholder="Write a message..."
+                            maxlength="2000"
+                            class="min-h-11 flex-1 resize-none rounded-3xl border-0 bg-[#fff7f5] px-4 py-3 text-sm leading-6 text-[#32142f] ring-1 ring-[#f2d7d5] placeholder:text-[#a78b9d] focus:ring-2 focus:ring-[#be185d]"
+                            x-data
+                            x-on:keydown.enter.prevent="if (!$event.shiftKey) $el.closest('form').submit()"
+                        ></textarea>
+
+                        <button type="submit" class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#9f2d60] text-white transition hover:bg-[#7c244f]" aria-label="Send message">
+                            <svg class="h-5 w-5 rotate-90" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <path d="M12 19V5"/>
+                                <path d="m5 12 7-7 7 7"/>
+                            </svg>
+                        </button>
+                    </form>
+                </footer>
+            </main>
         </div>
+    </div>
 
-        {{-- ── Message Input ── --}}
-        <div class="flex-shrink-0 px-4 py-3 bg-white border-t border-gray-200">
-
-            @if ($errors->any())
-                <p class="text-xs text-red-500 mb-2">{{ $errors->first('body') }}</p>
-            @endif
-
-            <form
-                method="POST"
-                action="{{ route('messages.store', $conversation) }}"
-                class="flex items-end gap-2"
-            >
-                @csrf
-
-                <textarea
-                    id="message-input"
-                    name="body"
-                    rows="1"
-                    placeholder="Type a message..."
-                    maxlength="2000"
-                    class="flex-1 resize-none bg-gray-100 border-0 rounded-2xl px-4 py-2.5 text-sm
-                           focus:outline-none focus:ring-2 focus:ring-indigo-400 transition
-                           leading-relaxed"
-                    x-data
-                    x-on:keydown.enter.prevent="if (!$event.shiftKey) $el.closest('form').submit()"
-                ></textarea>
-
-                <button
-                    type="submit"
-                    class="flex-shrink-0 w-10 h-10 rounded-full bg-indigo-600 hover:bg-indigo-700
-                           flex items-center justify-center transition-colors duration-150 shadow-sm"
-                    title="Send (Enter)"
-                >
-                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-white rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 19V5m0 0l-7 7m7-7l7 7" />
-                    </svg>
-                </button>
-            </form>
-
-            <p class="text-[10px] text-gray-400 mt-1.5 text-center">
-                Enter to send &middot; Shift+Enter for new line
-            </p>
-        </div>
-    </main>
-</div>
-
-{{-- Auto-scroll to bottom --}}
-<script>
-    document.addEventListener('DOMContentLoaded', function () {
-        const thread = document.getElementById('messages-thread');
-        if (thread) thread.scrollTop = thread.scrollHeight;
-    });
-</script>
-
-</body>
-</html>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const thread = document.getElementById('messages-thread');
+            if (thread) thread.scrollTop = thread.scrollHeight;
+        });
+    </script>
+</x-app-layout>
