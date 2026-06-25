@@ -10,6 +10,10 @@ Kindred is a small Laravel dating-style proof of concept with registration, logi
 - Vite and Tailwind CSS
 - Plain Docker Compose setup, not Laravel Sail
 
+## Architecture Notes
+
+See [architectural-decision.md](architectural-decision.md) for the implementation decisions, proof-of-concept scope, validation approach, action-class structure, Docker notes, and future production improvements.
+
 ## Local Setup With Docker
 
 Copy the Docker environment file:
@@ -95,3 +99,7 @@ Stop the containers and remove the MySQL volume:
 ```bash
 docker compose down -v
 ```
+
+## AI Assistance
+
+This project used AI assistance: Claude chat for planning and architecture decisions, and Codex CLI for UI design support, implementation assistance, and code iteration.

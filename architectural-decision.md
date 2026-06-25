@@ -1,431 +1,258 @@
-## **Architectural Decision Document** 
+# Architectural Decision Document
 
-## **Project** 
+## Project
 
-Laravel Dating-Style Proof of Concept 
+Kindred is a Laravel dating-style proof of concept. The goal is to show clean Laravel structure, practical database design, Eloquent relationships, basic validation, and a usable interface while staying within the requested test scope.
 
-## **Purpose** 
+This project intentionally avoids production-level complexity. The implementation focuses on the requested features first:
 
-This project is a small proof of concept for a simple dating-style web application. The main goal is to demonstrate clean Laravel backend structure, sensible database design, Eloquent relationships, and a usable interface. 
+- User registration and login
+- Basic user profile with name, age, bio, gender, looking-for preference, and location
+- Browse/discover profiles returned from the database
+- Messaging/conversations between users
+- Migrations and Eloquent relationships
+- Basic validation and a clean usable interface
+- Docker Compose setup for local testing
 
-The application is intentionally not production-ready or feature-heavy. The focus is on maintainability, clarity, and showing that the foundation can be extended if needed. 
+## Technical Stack
 
-## **Technical Stack** 
+- Laravel 13
+- Laravel Breeze-style authentication flow
+- Blade server-rendered views
+- Tailwind CSS and Vite for styling and assets
+- Alpine.js for small interactions
+- MySQL for Docker-based local development
+- SQLite-compatible tests for fast local verification
+- Plain Docker Compose, not Laravel Sail
 
-- Laravel 
+## Scope Decision
 
-- Laravel Breeze for authentication 
+The project follows the requested proof-of-concept scope instead of trying to become a full dating product. Several parts of the UI were improved to make the reviewer experience cleaner, but the backend remains intentionally small and readable.
 
-- Blade for server-rendered views 
+This keeps the work aligned with the test expectations: code quality, structure, relationships, validation, and a working end-to-end flow matter more than building advanced matching, realtime infrastructure, notifications, subscriptions, or media upload pipelines.
 
-- Tailwind CSS for simple UI styling 
+## Main Application Flow
 
-- Alpine.js for small frontend interactions 
+Users can:
 
-- MySQL as the database 
+- Register and log in
+- Create and update their profile
+- Browse compatible profiles from the database
+- Start or open a conversation
+- Send and view messages without a full page reload
 
-- Docker / Laravel Sail for local development 
+## Database Design
 
-## **Architecture Decision** 
+### users
 
-The application will use a Blade-based frontend while keeping the backend structured in an API-ready way. 
+Stores authentication data.
 
-The project will not be built as a full SPA. Instead, Blade will be used for the proof of concept interface, while backend logic will be separated cleanly through controllers, form requests, actions, models, and API resources where appropriate. 
+Key fields:
 
-This approach keeps the project realistic for a proof of concept while still showing scalable backend structure. 
+- id
+- name
+- email
+- password
+- timestamps
 
-## **Main Application Flow** 
+### profiles
 
-Users can: 
+Stores dating profile information separately from authentication data.
 
-- Register and log in 
+Key fields:
 
-- Create or update their basic profile 
+- id
+- user_id
+- age
+- bio
+- gender
+- looking_for_gender
+- location
+- timestamps
 
-- Browse other user profiles 
+Decision: profile information is separated from `users` so authentication stays clean and profile-specific fields can grow independently later.
 
-1 
+### conversations
 
-- Start a conversation with another user • Send and view messages inside conversations 
+Stores conversation containers.
 
-## **Core Entities** 
+Key fields:
 
-The main entities are: 
+- id
+- timestamps
 
-- User • Profile 
+Decision: the conversation itself does not store `user_one_id` and `user_two_id`. Participants are stored in a separate table so the relationship stays normalized and flexible.
 
-- Conversation 
+### conversation_participants
 
-- Conversation Participant 
+Stores users that belong to a conversation.
 
-- Message 
+Key fields:
 
-## **Database Design** 
+- id
+- conversation_id
+- user_id
+- timestamps
 
-## **users** 
+Constraint:
 
-Stores authentication-related user data. 
+- unique `conversation_id` and `user_id`
 
-Main fields: 
+Decision: the current product uses one-to-one conversations, but this table avoids hardcoding that limitation directly into the conversation record.
 
-- id 
+### messages
 
-- name 
+Stores messages inside conversations.
 
-- email • password • timestamps 
+Key fields:
 
-## **profiles** 
+- id
+- conversation_id
+- sender_id
+- body
+- read_at
+- timestamps
 
-Stores dating profile information separate from authentication data. 
+Decision: messages belong to conversations and track the sender. This keeps the message history independent from the participants list.
 
-Main fields: 
+## Eloquent Relationships
 
-- id • user_id • age • bio • gender • looking_for_gender • location • timestamps 
+The core relationships are:
 
-Decision: 
+- `User` has one `Profile`
+- `User` belongs to many `Conversation` records through `conversation_participants`
+- `User` has many `Message` records as sender
+- `Profile` belongs to `User`
+- `Conversation` belongs to many `User` records through `conversation_participants`
+- `Conversation` has many `Message` records
+- `ConversationParticipant` belongs to `Conversation`
+- `ConversationParticipant` belongs to `User`
+- `Message` belongs to `Conversation`
+- `Message` belongs to `User` as sender
 
-Profile data is separated from the users table to keep authentication data clean and to allow profile-specific fields to grow independently. 
+## Backend Structure
 
-2 
+The backend uses normal Laravel layers:
 
-## **conversations** 
+- Controllers for HTTP request and response handling
+- Form requests for validation
+- Actions for focused business operations
+- Eloquent models for relationships and persistence
+- Blade views for the proof-of-concept interface
 
-Stores conversation containers. 
+The goal is not to create unnecessary abstraction. The goal is to avoid putting all behavior directly inside controllers once the behavior starts becoming reusable or multi-step.
 
-Main fields: 
+## Actions Instead Of Large Services
 
-• id • timestamps 
+This project uses action classes for focused operations such as starting conversations and sending messages.
 
-Decision: 
+Actions were chosen instead of broad service classes because the behavior is small and task-oriented. A service class can become a generic container for unrelated methods, especially in a proof of concept. Actions keep each operation explicit, easy to test, and easy to locate.
 
-The conversations table does not directly store `user_one_id` and `user_two_id` . Participants are stored separately in a pivot-style table to keep the structure more flexible and normalized. 
+This is cleaner than placing everything in the controller because controllers should mainly coordinate the request lifecycle:
 
-## **conversation_participants** 
+- receive the request
+- authorize the user
+- call the focused application logic
+- return a response
 
-Stores users who belong to a conversation. 
+Keeping conversation and message creation logic in actions makes the controller smaller and keeps business rules reusable if the project later adds API routes, notifications, realtime broadcasting, or background jobs.
 
-Main fields: 
+## Form Requests And Validation
 
-- id • conversation_id • user_id • timestamps 
+Form requests were added for profile and message input. Validation is intentionally practical and light because the project is a proof of concept.
 
-Constraints: 
+Examples of current validation choices:
 
-- unique conversation_id and user_id combination 
+- Name is required where profile ownership/profile updates need it
+- Age must be numeric and within a reasonable range
+- Bio is optional with a maximum length
+- Gender and looking-for fields are limited to supported values
+- Location is optional with a maximum length
+- Message body is required and length-limited
 
-Decision: 
+This is enough to demonstrate Laravel validation structure and protect the core flows without spending time on production-only concerns such as moderation, identity checks, image review, spam controls, rate limiting rules, or advanced matching validation.
 
-This structure supports cleaner relationships and avoids hardcoding the conversation to only two users at the database level, even though the proof of concept will only use one-to-one conversations. 
+## Authorization Decision
 
-## **messages** 
+The app includes authorization checks for the important user boundaries:
 
-Stores messages sent inside conversations. 
+- A user can only edit their own profile
+- A user cannot start a conversation with themselves
+- A user can only view conversations where they are a participant
+- A user can only send messages to conversations where they are a participant
 
-Main fields: 
+This is handled through Laravel authorization patterns and controller-level checks where appropriate. That keeps the proof of concept understandable while still protecting the core data boundaries.
 
-- id • conversation_id • sender_id • body • read_at • timestamps 
+## Frontend And UX Decision
 
-Decision: 
+The UI was improved beyond plain HTML to make the test easier to review and use. The pages include a modern landing page, authentication screens, discover cards, app sidebar, and a messages workspace.
 
-3 
+The frontend remains Blade-based rather than a SPA. This is intentional because a SPA would add extra architecture and build complexity that was not required. Blade is enough for the requested proof of concept and keeps the Laravel backend visible.
 
-Messages belong to a conversation and have a sender. This keeps message history separate from participants and allows conversations to scale cleanly. 
+The browse/discover page only displays profiles returned from the database. Placeholder or future-only fields are avoided in the core profile cards unless they are clearly noted as future work.
 
-## **Eloquent Relationships** 
+## Messaging Behavior
 
-## **User** 
+Messages can be sent without a full page reload by using a lightweight asynchronous request from the Blade page. This improves usability while avoiding a full realtime stack.
 
-- hasOne Profile 
+Laravel Reverb was not implemented in this proof of concept. Reverb would be the stronger production-style approach for realtime messaging because it can broadcast new messages immediately to conversation participants. It was left out because it requires extra infrastructure, event broadcasting setup, frontend subscription logic, and more test surface than the assignment asks for.
 
-- belongsToMany Conversation through conversation_participants 
+For this test, lightweight async sending is a better fit: it demonstrates the messaging flow, keeps the app usable, and avoids over-engineering.
 
-- hasMany Message as sender 
+## Docker Decision
 
-## **Profile** 
+The project uses plain Docker Compose instead of Laravel Sail because the additional instruction asked for Docker itself. The Docker setup includes:
 
-- belongsTo User 
+- PHP-FPM application container
+- Nginx web server container
+- MySQL database container
+- Node container for frontend asset commands
 
-## **Conversation** 
+This gives reviewers a repeatable local environment without requiring them to install PHP, Composer, Node, or MySQL directly on their machine.
 
-• belongsToMany User through conversation_participants • hasMany Message 
+## Deferred Production Concerns
 
-## **ConversationParticipant** 
+The following were intentionally not implemented because they are outside the proof-of-concept scope:
 
-• belongsTo Conversation • belongsTo User 
+- Laravel Reverb for realtime messaging
+- Redis for cache, queues, and broadcasting
+- Queue jobs for notifications, email, message delivery events, or media processing
+- Image upload and moderation
+- Advanced matching algorithms
+- Profile verification
+- Online presence tracking
+- Typing indicators and read receipts
+- Search indexing
+- API token/mobile app support
+- Admin moderation tools
+- Rate limiting beyond Laravel defaults
+- Production observability and alerting
 
-## **Message** 
+Redis would be a good production addition for cache, sessions, queues, and broadcasting coordination. Jobs would also be useful once the app sends emails, push notifications, moderation tasks, or expensive matching calculations. They were skipped here because adding workers, queue monitoring, retry behavior, and failure handling would expand the project beyond the requested test.
 
-• belongsTo Conversation • belongsTo User as sender 
+## Future Improvements
 
-## **Backend Structure** 
+If the project continued beyond the proof of concept, the most useful next steps would be:
 
-The backend will be organized using: 
+- Add Laravel Reverb for realtime incoming messages
+- Add Redis-backed cache, queues, and possibly sessions
+- Add queued notifications for new messages and matches
+- Add profile photos with validation and storage
+- Add online/offline presence
+- Add better matching rules based on distance, hobbies, and activity
+- Add message read receipts and typing indicators
+- Add profile view and like tracking from real events
+- Add policy classes where authorization rules grow
+- Add broader feature and browser tests
+- Add production Docker hardening and deployment configuration
 
-- Controllers for request handling 
+These are intentionally framed as future work. The current implementation prioritizes completing the assignment requirements cleanly instead of over-engineering the proof of concept.
 
-- Form Requests for validation 
+## AI Assistance Note
 
-- Actions for business logic 
+This project used AI assistance:
 
-- Eloquent models for relationships 
+- Claude chat was used for planning and architecture decisions.
+- Codex CLI was used for UI design support, implementation assistance, and code iteration.
 
-- API Resources for API-ready response formatting where useful 
-
-Suggested structure: 
-
-```
-app/
-  Actions/
-    Conversations/
-      StartConversationAction.php
-      SendMessageAction.php
-```
-
-4 
-
-```
-  Http/
-    Controllers/
-      Web/
-        ProfileController.php
-        BrowseProfileController.php
-        ConversationController.php
-        MessageController.php
-      Api/
-        ProfileController.php
-        ConversationController.php
-        MessageController.php
-    Requests/
-      Profile/
-        UpdateProfileRequest.php
-      Message/
-        StoreMessageRequest.php
-    Resources/
-      ProfileResource.php
-      ConversationResource.php
-      MessageResource.php
-```
-
-```
-  Models/
-    User.php
-    Profile.php
-    Conversation.php
-    ConversationParticipant.php
-    Message.php
-```
-
-## **Validation Decision** 
-
-Form validation will be kept practical and minimal because this is a proof of concept. 
-
-The goal is not to cover every possible production validation rule. Instead, the project will validate the most important inputs needed to keep the application functional and safe enough for review. 
-
-Example validation rules: 
-
-## **Profile** 
-
-- name is required 
-
-- age is required, numeric, and within a reasonable range 
-
-5 
-
-- bio is optional but has a maximum length • gender is optional or limited to predefined values 
-
-- location is optional with a maximum length 
-
-## **Message** 
-
-- message body is required • message body has a maximum length 
-
-Decision: 
-
-The project will avoid complex validation such as content moderation, profile verification, image validation, matching rules, and advanced filtering because these are outside the proof of concept scope. 
-
-## **Authorization Decision** 
-
-Users should only access data they are allowed to see. 
-
-Rules: 
-
-- A user can only edit their own profile 
-
-- A user cannot start a conversation with themselves 
-
-- A user can only view conversations where they are a participant 
-
-- A user can only send messages to conversations where they are a participant 
-
-Authorization may be handled through controller checks, policies, or action-level guards depending on what keeps the implementation clean and readable. 
-
-## **UI Decision** 
-
-The UI will use Blade, Tailwind CSS, and small Alpine.js interactions. 
-
-The frontend will be clean, warm, and modern while staying lightweight. 
-
-The goal is usability and emotional fit for a dating-style product, not visual complexity for its own sake. The interface should avoid a cold corporate look and should make the product feel approachable, romantic, and easy to start using.
-
-## **Public and Auth UI Decision**
-
-The public landing page and authentication pages will share the same warm visual language. The landing page will use a web-first layout instead of copying a mobile dating app screen directly, while login and registration will stay simple and form-focused.
-
-Decision:
-
-- Use a full-width warm hero with rose, coral, and deep purple tones.
-
-- Keep navigation minimal on the public landing page.
-
-- Use clear primary and secondary calls to action: Register / Get Started and Login / Sign In.
-
-- Use a matching warm guest layout for login and registration so authentication does not feel like a default Laravel/Breeze screen.
-
-- Keep login and registration lightweight: one centered card, short product copy, rounded inputs, clear submit action, and simple cross-links between auth pages.
-
-- Use reusable Blade components for repeated UI patterns instead of duplicating heavy markup.
-
-- Use local static sample profile photos only where they help the landing hero communicate the dating product quickly.
-
-- Use inline SVG outline icons for lightweight interaction cues and avoid adding a large icon dependency unless the application later needs broad icon coverage.
-
-- Keep interactive effects CSS-based where possible, such as hover lift, image scale, badge states, and CTA focus states.
-
-The landing page should avoid extra showcase sections that make the proof of concept feel larger than it is. A hero section, a small highlights section, and a minimal footer are enough for the current scope.
-
-Current UI components:
-
-```
-resources/views/layouts/
-  guest.blade.php
-
-resources/views/components/landing/
-  highlight-card.blade.php
-  profile-card.blade.php
-```
-
-Current public landing image assets:
-
-```
-public/images/landing/
-  profile-1.png
-  profile-2.png
-  profile-3.png
-```
-
-Reasoning:
-
-The proof of concept benefits from public and auth screens that communicate the product feeling immediately. Static Blade components, local images, and CSS-only interaction states keep the implementation simple, reviewable, and fast enough for the current scope while still looking closer to a modern dating product.
-
-The sample photos are presentation assets only. They are not part of a production profile-photo upload system, moderation pipeline, or user media storage architecture.
-
-## **Authenticated Discover UI Decision**
-
-The authenticated user area will use a collapsed left sidebar instead of a top navigation bar. The sidebar keeps the main dating workflow visible without taking much horizontal space.
-
-Decision:
-
-- Use a compact sidebar with icon-and-label navigation for Discover, Messages, and Profile.
-
-- Keep the Discover page header inside the page content, not as a global topbar.
-
-- The Discover page should display only data currently backed by the database: authenticated user identity, compatible profile records, and existing conversation participants.
-
-- Profile cards should be backed by the users returned from the browse backend query. They must not invent additional users in the Blade view.
-
-- Recent matches should use existing conversations where possible.
-
-- Placeholder product data should not be shown on Browse until the supporting database tables or columns exist.
-
-Current data limitations:
-
-- Profile photos are not implemented yet, so Discover cards use portrait-style placeholders with user initials.
-
-- Online/offline status is not stored yet, so online indicators are not displayed.
-
-- Hobbies/interests are not stored yet, so hobby chips are not displayed.
-
-- Likes, profile views, popularity, featured picks, notifications, and activity analytics are not stored yet, so those sections are not displayed.
-
-- Search, Nearby, New, Popular, Online tabs, and filter controls are not displayed until they can be backed by real query behavior.
-
-Reasoning:
-
-This keeps the product experience visually close to a modern dating dashboard while preserving data honesty. Future product data should be introduced when the corresponding schema and backend behavior exist.
-
-Pages: 
-
-- Dashboard 
-
-- Login 
-
-- Register 
-
-- Edit profile 
-
-- Browse profiles 
-
-- View profile 
-
-- Conversation list 
-
-- Conversation detail 
-
-- Send message form 
-
-Alpine.js will only be used for small interface interactions such as dropdowns, simple toggles, or confirmation states. 
-
-## **API-Ready Decision** 
-
-Although the proof of concept will primarily use Blade views, the backend will be structured in a way that can support an API later. 
-
-This means: 
-
-- Business logic will not be placed directly inside Blade files • Controllers will stay thin 
-
-- Reusable logic will be placed in Actions • API Resources may be added for structured JSON responses • Database relationships will be normalized and scalable 
-
-Decision: 
-
-The project will be API-ready by design, but it will not overbuild a complete API unless needed for the proof of concept. 
-
-## **Scope Boundaries** 
-
-Included: 
-
-- Authentication • Basic profiles • Browse profiles 
-
-- Conversations • Messaging • Clean migrations and relationships • Docker setup • Basic validation 
-
-- Basic Blade UI, including a polished public landing page 
-
-Not included: 
-
-- Real-time messaging • User-uploaded profile photos • Matching algorithm • Likes/swipes • Notifications • Email verification customization 
-
-- Admin panel 
-
-- Payment features 
-
-- Advanced search 
-
-- Content moderation 
-
-7 
-
-- Production-grade security hardening 
-
-## **Reasoning** 
-
-The client requested a proof of concept that focuses on backend quality, clean structure, and sensible implementation choices. 
-
-This architecture keeps the application small enough to finish within the requested timeframe while still showing professional Laravel practices. 
-
-The main goal is to deliver a working, understandable, and extendable Laravel application instead of a feature-heavy prototype that is harder to review. 
-
-## **AI Usage Disclosure** 
-
-AI may be used as a planning and review assistant for architecture, code organization, and documentation. 
-
-All implementation decisions and final code will be reviewed manually before submission. 
-
-8 
+The final structure, scope, and implementation decisions were reviewed manually.
