@@ -5,10 +5,13 @@ namespace App\Http\Controllers;
 use App\Actions\SendMessageAction;
 use App\Http\Requests\StoreMessageRequest;
 use App\Models\Conversation;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\RedirectResponse;
 
 class MessageController extends Controller
 {
+    use AuthorizesRequests;
+
     /**
      * Store a new message in a conversation.
      *
