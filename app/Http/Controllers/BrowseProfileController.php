@@ -19,13 +19,32 @@ class BrowseProfileController extends Controller
      */
     public function index(Request $request): View
     {
+        $viewerProfile = $request->user()->profile;
+
         $profiles = User::with('profile')
             ->whereHas('profile')                  // Only show users who have a profile
             ->where('id', '!=', $request->user()->id) // Exclude self
+            ->when($viewerProfile?->looking_for_gender, function ($query, string $lookingForGender) {
+                $query->whereHas('profile', fn ($profileQuery) => $profileQuery->where('gender', $lookingForGender));
+            })
+            ->when($viewerProfile?->gender, function ($query, string $gender) {
+                $query->whereHas('profile', fn ($profileQuery) => $profileQuery->where('looking_for_gender', $gender));
+            })
             ->latest()
             ->paginate(12);
 
-        return view('browse.index', compact('profiles'));
+        $recentMatches = $request->user()
+            ->conversations()
+            ->with('participants.profile')
+            ->latest()
+            ->take(7)
+            ->get()
+            ->flatMap(fn ($conversation) => $conversation->participants)
+            ->reject(fn (User $participant) => $participant->id === $request->user()->id)
+            ->unique('id')
+            ->values();
+
+        return view('browse.index', compact('profiles', 'recentMatches'));
     }
 
     /**

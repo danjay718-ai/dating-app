@@ -14,12 +14,12 @@
         <!-- Scripts -->
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     </head>
-    <body class="font-sans antialiased bg-gray-50 text-gray-900">
+    <body class="font-sans antialiased bg-[#fff7f5] text-[#32142f]">
 
-        <div class="min-h-screen flex flex-col">
-            <x-topbar />
+        <div class="min-h-screen">
+            <x-sidebar />
 
-            <main class="flex-1">
+            <main class="min-h-screen pl-20 sm:pl-24">
                 {{ $slot }}
             </main>
         </div>

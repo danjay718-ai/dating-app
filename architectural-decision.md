@@ -318,6 +318,40 @@ The proof of concept benefits from public and auth screens that communicate the 
 
 The sample photos are presentation assets only. They are not part of a production profile-photo upload system, moderation pipeline, or user media storage architecture.
 
+## **Authenticated Discover UI Decision**
+
+The authenticated user area will use a collapsed left sidebar instead of a top navigation bar. The sidebar keeps the main dating workflow visible without taking much horizontal space.
+
+Decision:
+
+- Use a compact sidebar with icon-and-label navigation for Discover, Messages, and Profile.
+
+- Keep the Discover page header inside the page content, not as a global topbar.
+
+- The Discover page should display only data currently backed by the database: authenticated user identity, compatible profile records, and existing conversation participants.
+
+- Profile cards should be backed by the users returned from the browse backend query. They must not invent additional users in the Blade view.
+
+- Recent matches should use existing conversations where possible.
+
+- Placeholder product data should not be shown on Browse until the supporting database tables or columns exist.
+
+Current data limitations:
+
+- Profile photos are not implemented yet, so Discover cards use portrait-style placeholders with user initials.
+
+- Online/offline status is not stored yet, so online indicators are not displayed.
+
+- Hobbies/interests are not stored yet, so hobby chips are not displayed.
+
+- Likes, profile views, popularity, featured picks, notifications, and activity analytics are not stored yet, so those sections are not displayed.
+
+- Search, Nearby, New, Popular, Online tabs, and filter controls are not displayed until they can be backed by real query behavior.
+
+Reasoning:
+
+This keeps the product experience visually close to a modern dating dashboard while preserving data honesty. Future product data should be introduced when the corresponding schema and backend behavior exist.
+
 Pages: 
 
 - Dashboard 
